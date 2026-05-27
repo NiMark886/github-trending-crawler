@@ -19,10 +19,12 @@
 | 热榜浏览 | 日榜 / 周榜 / 月榜，支持按语言筛选 |
 | 仓库搜索 | 按关键词搜索 GitHub 仓库，查看详细信息 |
 | 仓库详情 | 点击仓库查看 README、Issues、评论 |
+| 复选框多选 | 勾选多个仓库，一键批量下载 |
 | 镜像加速下载 | 多源自动切换：ghfast.top / ghproxy.cn / 直连 |
 | 翻译功能 | Google Translate / 百度翻译，中英互译 |
 | 多语言界面 | 中文 / English / 日本語 / 한국어 / Français / Deutsch / Español |
 | 批量下载 | 多线程并发，实时进度条，支持终止 |
+| 文件名智能提取 | 自动从 Content-Disposition / URL 参数获取正确文件名 |
 | GitHub Token | 可选配置，提升 API 速率限制 |
 
 ### 安装教程
@@ -30,7 +32,7 @@
 #### 方式一：直接运行 exe（推荐）
 
 1. 前往 [Releases](https://github.com/NiMark886/github-trending-crawler/releases) 页面
-2. 下载 `GitHub热榜爬虫.exe`
+2. 下载 `TrendingCrawler.exe`
 3. 双击运行即可，无需安装 Python
 
 > 如果被杀毒软件拦截，请添加信任或暂时关闭杀毒软件。
@@ -55,7 +57,7 @@ python gui.py
 
 ```bash
 pip install pyinstaller
-python -m PyInstaller github_crawler.spec
+python -m PyInstaller TrendingCrawler.spec
 ```
 
 生成的 exe 在 `dist/` 目录下。
@@ -149,7 +151,7 @@ python -m PyInstaller github_crawler.spec
 ├── config.py                   # 配置管理
 ├── downloader.py               # 下载模块
 ├── requirements.txt            # Python 依赖
-├── github_crawler.spec         # PyInstaller 打包配置
+├── TrendingCrawler.spec    # PyInstaller 打包配置
 ├── icon.ico                    # 应用图标
 └── LICENSE                     # MIT License
 ```
@@ -187,10 +189,12 @@ A Python-based GitHub trending repository crawler with a Win11 Explorer-style GU
 | Trending | Daily / Weekly / Monthly, filter by language |
 | Search | Search GitHub repos by keyword |
 | Repo Detail | View README, Issues, and comments |
+| Checkbox Select | Select multiple repos for batch download |
 | Mirror Download | Auto-switch: ghfast.top / ghproxy.cn / direct |
 | Translation | Google Translate / Baidu Translate |
 | Multi-language | 中文 / English / 日本語 / 한국어 / Français / Deutsch / Español |
 | Batch Download | Multi-threaded, real-time progress, stop button |
+| Smart Filename | Auto-detect from Content-Disposition / URL params |
 | GitHub Token | Optional, increases API rate limit |
 
 ### Installation
@@ -198,7 +202,7 @@ A Python-based GitHub trending repository crawler with a Win11 Explorer-style GU
 #### Option 1: Download exe (Recommended)
 
 1. Go to [Releases](https://github.com/NiMark886/github-trending-crawler/releases)
-2. Download `GitHub热榜爬虫.exe`
+2. Download `TrendingCrawler.exe`
 3. Double-click to run, no Python needed
 
 > If blocked by antivirus, add an exception or temporarily disable it.
@@ -223,7 +227,7 @@ python gui.py
 
 ```bash
 pip install pyinstaller
-python -m PyInstaller github_crawler.spec
+python -m PyInstaller TrendingCrawler.spec
 ```
 
 Output will be in the `dist/` directory.
@@ -315,7 +319,7 @@ Config file: `~/.github_crawler/config.json`
 ├── config.py                   # Configuration manager
 ├── downloader.py               # Download module
 ├── requirements.txt            # Python dependencies
-├── github_crawler.spec         # PyInstaller build config
+├── TrendingCrawler.spec         # PyInstaller build config
 ├── icon.ico                    # App icon
 └── LICENSE                     # MIT License
 ```
