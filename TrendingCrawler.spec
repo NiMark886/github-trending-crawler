@@ -1,54 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""
-PyInstaller spec file for TrendingCrawler
-"""
 
-import sys
-import os
-from pathlib import Path
-
-spec_dir = os.path.dirname(os.path.abspath(SPEC))
-
-datas = [
-    ('requirements.txt', '.'),
-    ('LICENSE', '.'),
-    ('README.md', '.'),
-]
-
-hiddenimports = [
-    'requests',
-    'bs4',
-    'beautifulsoup4',
-    'lxml',
-    'deep_translator',
-    'deep_translator.google_translator',
-    'customtkinter',
-    'json',
-    'threading',
-    'pathlib',
-    'datetime',
-    'typing',
-]
 
 a = Analysis(
     ['gui.py'],
-    pathex=[spec_dir],
+    pathex=[],
     binaries=[],
-    datas=datas,
-    hiddenimports=hiddenimports,
+    datas=[('icon.ico', '.')],
+    hiddenimports=['customtkinter', 'deep_translator', 'deep_translator.google_translator'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        'test',
-        'tests',
-        'unittest',
-        'pydoc',
-        'doctest',
-    ],
+    excludes=[],
     noarchive=False,
+    optimize=0,
 )
-
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -70,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico',
+    icon=['icon.ico'],
 )

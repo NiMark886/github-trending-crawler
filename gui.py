@@ -406,12 +406,18 @@ class Win11NavButton(ctk.CTkButton):
 class GitHubCrawlerGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("GitHub Trending Crawler")
-        self.geometry("1400x800")
-        self.minsize(1100, 650)
+        self.title("TrendingCrawler")
+        self.geometry("1500x850")
+        self.minsize(1200, 700)
         self.configure(fg_color=C['bg'])
 
-        icon_path = Path(__file__).parent / "icon.ico"
+        # 图标路径：优先 exe 同目录，再试打包临时目录
+        if getattr(sys, 'frozen', False):
+            icon_path = Path(sys.executable).parent / "icon.ico"
+        else:
+            icon_path = Path(__file__).parent / "icon.ico"
+        if not icon_path.exists():
+            icon_path = Path(getattr(sys, '_MEIPASS', '')) / "icon.ico"
         if icon_path.exists():
             try:
                 self.iconbitmap(icon_path)
@@ -641,7 +647,7 @@ class GitHubCrawlerGUI(ctk.CTk):
         self.trending_tree = self._make_tree(
             p, ("sel", "name", "language", "stars", "forks", "description", "action"),
             ("☑", "仓库名称", "语言", "Stars", "Forks", "描述", "操作"),
-            [35, 200, 70, 80, 80, 305, 60])
+            [45, 260, 80, 90, 90, 380, 80])
         self.trending_tree.bind("<ButtonRelease-1>", self._on_trending_click)
 
     def _on_trending_click(self, e):
@@ -707,7 +713,7 @@ class GitHubCrawlerGUI(ctk.CTk):
         self.search_tree = self._make_tree(
             body, ("sel", "name", "owner", "language", "stars", "forks", "action"),
             ("☑", "仓库名称", "作者", "语言", "Stars", "Forks", "操作"),
-            [35, 170, 90, 60, 70, 70, 60])
+            [45, 220, 120, 80, 90, 90, 80])
         self.search_tree.pack_forget()
         self.search_tree.master.pack(side='left', fill='both', expand=True)
 
