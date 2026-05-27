@@ -838,8 +838,15 @@ class GitHubCrawlerGUI(ctk.CTk):
 
         # Progress
         prog_card = self._card(p)
-        ctk.CTkLabel(prog_card, text=self._t('download_progress'), font=F['body'],
-                     text_color=C['text2']).pack(anchor='w', padx=16, pady=(10, 3))
+        prog_top = ctk.CTkFrame(prog_card, fg_color='transparent')
+        prog_top.pack(fill='x', padx=16, pady=(10, 3))
+        ctk.CTkLabel(prog_top, text=self._t('download_progress'), font=F['body'],
+                     text_color=C['text2']).pack(side='left')
+        self.url_stop_btn = ctk.CTkButton(prog_top, text=self._t('stop'), command=self._stop_url_dl,
+                                          fg_color=C['red'], hover_color=C['red_hover'],
+                                          width=55, height=24, corner_radius=6,
+                                          font=F['small'], state='disabled')
+        self.url_stop_btn.pack(side='right')
         self.url_progress = ctk.CTkProgressBar(prog_card, fg_color=C['border'],
                                                 progress_color=C['accent'], height=6, corner_radius=3)
         self.url_progress.pack(fill='x', padx=16, pady=3)
@@ -847,6 +854,7 @@ class GitHubCrawlerGUI(ctk.CTk):
         self.url_progress_label = ctk.CTkLabel(prog_card, text=self._t('ready'), font=F['caption'],
                                                 text_color=C['text3'])
         self.url_progress_label.pack(anchor='w', padx=16, pady=(0, 10))
+        self.url_download_cancel = False
 
         self.url_log = self._make_log(p)
 
@@ -854,6 +862,11 @@ class GitHubCrawlerGUI(ctk.CTk):
         d = filedialog.askdirectory()
         if d:
             self.url_download_dir.set(d)
+
+    def _stop_url_dl(self):
+        self.url_download_cancel = True
+        self._url_log("用户终止...")
+        self.url_stop_btn.configure(state='disabled')
 
     def _dl_single_url(self):
         url = self.url_input.get().strip()
@@ -926,6 +939,8 @@ class GitHubCrawlerGUI(ctk.CTk):
     def _do_url_dl(self, url, fn=None):
         def _run():
             try:
+                self.url_download_cancel = False
+                self.after(0, lambda: self.url_stop_btn.configure(state='normal'))
                 out = self.url_download_dir.get()
                 timeout = int(self.url_timeout.get())
                 os.makedirs(out, exist_ok=True)
@@ -942,6 +957,16 @@ class GitHubCrawlerGUI(ctk.CTk):
                 dl = 0
                 with open(save, 'wb') as f:
                     for c in resp.iter_content(65536):
+                        if self.url_download_cancel:
+                            resp.close()
+                            f.close()
+                            if os.path.exists(save):
+                                os.remove(save)
+                            self.after(0, lambda: self.url_progress.set(0))
+                            self.after(0, lambda: self.url_progress_label.configure(text=self._t('stopped')))
+                            self._url_log("已终止")
+                            self.after(0, lambda: self.url_stop_btn.configure(state='disabled'))
+                            return
                         if c:
                             f.write(c)
                             dl += len(c)
@@ -955,18 +980,24 @@ class GitHubCrawlerGUI(ctk.CTk):
                 self.after(0, lambda: self.url_progress.set(1))
                 self.after(0, lambda s=sz: self.url_progress_label.configure(text=f"完成 {s/(1024*1024):.2f} MB"))
                 self._url_log(f"完成 {sz/(1024*1024):.2f} MB")
+                self.after(0, lambda: self.url_stop_btn.configure(state='disabled'))
             except Exception as e:
                 self._url_log(f"失败: {e}")
-                self.after(0, lambda: self.url_progress_label.configure(text="失败"))
+                self.after(0, lambda: self.url_progress_label.configure(text=self._t('failed')))
+                self.after(0, lambda: self.url_stop_btn.configure(state='disabled'))
         threading.Thread(target=_run, daemon=True).start()
 
     def _batch_dl(self, urls):
         def _run():
+            self.url_download_cancel = False
+            self.after(0, lambda: self.url_stop_btn.configure(state='normal'))
             w = int(self.url_workers.get())
             t = len(urls)
             done, fail = [0], [0]
             self._url_log(f"批量 {t} 个文件, {w} 线程")
             def dl_one(u):
+                if self.url_download_cancel:
+                    return
                 try:
                     out = self.url_download_dir.get()
                     os.makedirs(out, exist_ok=True)
@@ -976,6 +1007,10 @@ class GitHubCrawlerGUI(ctk.CTk):
                     save = os.path.join(out, name)
                     with open(save, 'wb') as f:
                         for c in r.iter_content(8192):
+                            if self.url_download_cancel:
+                                r.close(); f.close()
+                                if os.path.exists(save): os.remove(save)
+                                return
                             if c: f.write(c)
                     done[0] += 1
                     self._url_log(f"完成: {name}")
@@ -987,7 +1022,14 @@ class GitHubCrawlerGUI(ctk.CTk):
                     self._url_log(f"失败: {u} - {e}")
             with ThreadPoolExecutor(max_workers=w) as ex:
                 list(as_completed(ex.submit(dl_one, u) for u in urls))
-            self._url_log(f"完成: 成功{done[0]} 失败{fail[0]}")
+            if self.url_download_cancel:
+                self._url_log(f"已终止 完成:{done[0]} 失败:{fail[0]}")
+                self.after(0, lambda: self.url_progress_label.configure(text=self._t('stopped')))
+            else:
+                self._url_log(f"完成: 成功{done[0]} 失败{fail[0]}")
+                self.after(0, lambda: self.url_progress_label.configure(
+                    text=f"{self._t('completed')} {done[0]} {self._t('failed')} {fail[0]}"))
+            self.after(0, lambda: self.url_stop_btn.configure(state='disabled'))
         threading.Thread(target=_run, daemon=True).start()
 
     def _url_log(self, msg):
