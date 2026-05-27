@@ -883,21 +883,42 @@ class GitHubCrawlerGUI(ctk.CTk):
                       fg_color=C['accent'], hover_color=C['accent_hover'],
                       height=32, corner_radius=6).pack(pady=10)
 
+    def _extract_filename(self, resp, url):
+        """从 Content-Disposition 或 URL 提取文件名。"""
+        cd = resp.headers.get('content-disposition', '')
+        if cd:
+            import re as _re
+            m = _re.search(r"filename\*=UTF-8''(.+?)(?:;|$)", cd, _re.IGNORECASE)
+            if m:
+                return unquote(m.group(1).strip())
+            m = _re.search(r'filename="?([^";]+)"?', cd, _re.IGNORECASE)
+            if m:
+                return unquote(m.group(1).strip())
+        name = os.path.basename(urlparse(url).path)
+        if name and '.' in name:
+            return unquote(name)
+        final_url = resp.url
+        if final_url != url:
+            name = os.path.basename(urlparse(final_url).path)
+            if name and '.' in name:
+                return unquote(name)
+        return None
+
     def _do_url_dl(self, url, fn=None):
         def _run():
             try:
                 out = self.url_download_dir.get()
                 timeout = int(self.url_timeout.get())
                 os.makedirs(out, exist_ok=True)
-                if not fn:
-                    name = os.path.basename(urlparse(url).path) or "download"
-                    save = os.path.join(out, unquote(name))
-                else:
-                    save = os.path.join(out, fn)
                 self._url_log(f"下载: {url}")
                 self.url_progress_label.configure(text="获取文件信息...")
                 resp = requests.get(url, stream=True, timeout=timeout)
                 resp.raise_for_status()
+                if not fn:
+                    name = self._extract_filename(resp, url) or "download"
+                    save = os.path.join(out, name)
+                else:
+                    save = os.path.join(out, fn)
                 total = int(resp.headers.get('content-length', 0))
                 dl = 0
                 with open(save, 'wb') as f:
@@ -930,10 +951,10 @@ class GitHubCrawlerGUI(ctk.CTk):
                 try:
                     out = self.url_download_dir.get()
                     os.makedirs(out, exist_ok=True)
-                    name = os.path.basename(urlparse(u).path) or f"f_{done[0]}"
-                    save = os.path.join(out, unquote(name))
                     r = requests.get(u, stream=True, timeout=int(self.url_timeout.get()))
                     r.raise_for_status()
+                    name = self._extract_filename(r, u) or f"file_{done[0]}"
+                    save = os.path.join(out, name)
                     with open(save, 'wb') as f:
                         for c in r.iter_content(8192):
                             if c: f.write(c)
