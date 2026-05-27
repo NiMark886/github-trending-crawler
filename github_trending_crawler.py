@@ -36,12 +36,13 @@ from typing import List, Dict, Optional
 class GitHubTrendingCrawler:
     """Crawler for GitHub trending repositories with ethical scraping practices."""
 
-    def __init__(self, rate_limit: float = 1.0):
+    def __init__(self, rate_limit: float = 1.0, token: Optional[str] = None):
         """
         Initialize the crawler.
 
         Args:
             rate_limit: Minimum seconds between requests (default: 1.0)
+            token: GitHub personal access token (optional, for higher API rate limits)
         """
         self.base_url = "https://github.com/trending"
         self.rate_limit = rate_limit
@@ -63,6 +64,9 @@ class GitHubTrendingCrawler:
         self.session = requests.Session()
         self.session.headers.update(self.headers)
 
+        # Store token for API calls
+        self.token = token
+
     def _respect_rate_limit(self):
         """Ensure we don't exceed rate limits."""
         current_time = time.time()
@@ -79,6 +83,7 @@ class GitHubTrendingCrawler:
     ) -> List[Dict]:
         """
         Fetch GitHub trending repositories.
+        Uses GitHub API (works without proxy) with web scraping as fallback.
 
         Args:
             since: Time range - 'daily', 'weekly', or 'monthly'
@@ -86,10 +91,99 @@ class GitHubTrendingCrawler:
 
         Returns:
             List of repository dictionaries
-
-        Raises:
-            requests.RequestException: If request fails after retries
         """
+        # Try API first (more reliable, works behind firewalls)
+        repos = self._fetch_trending_via_api(since, language)
+        if repos:
+            return repos
+
+        # Fallback to web scraping
+        print("API failed, trying web scraping...")
+        return self._fetch_trending_via_web(since, language)
+
+    def _fetch_trending_via_api(
+        self,
+        since: str = "weekly",
+        language: Optional[str] = None
+    ) -> List[Dict]:
+        """Fetch trending repos using GitHub Search API."""
+        from datetime import datetime, timedelta
+
+        # Map time range to date offset
+        days_map = {"daily": 1, "weekly": 7, "monthly": 30}
+        days = days_map.get(since, 7)
+        since_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        # Build search query
+        query = f"stars:>100 pushed:>{since_date}"
+        if language:
+            query += f" language:{language}"
+
+        # Respect rate limiting
+        self._respect_rate_limit()
+
+        try:
+            print(f"Fetching via API: {query}")
+            api_url = "https://api.github.com/search/repositories"
+            params = {
+                "q": query,
+                "sort": "stars",
+                "order": "desc",
+                "per_page": 30
+            }
+
+            # Use token if available for higher rate limits
+            headers = {}
+            if self.token:
+                headers["Authorization"] = f"token {self.token}"
+
+            response = self.session.get(api_url, params=params, timeout=15, headers=headers)
+
+            if response.status_code == 403:
+                print("API rate limit exceeded (403). Use a GitHub token for higher limits.")
+                return []
+            if response.status_code != 200:
+                print(f"API returned status {response.status_code}")
+                return []
+
+            # Print rate limit info
+            remaining = response.headers.get("X-RateLimit-Remaining", "?")
+            limit = response.headers.get("X-RateLimit-Limit", "?")
+            print(f"API rate limit: {remaining}/{limit}")
+
+            data = response.json()
+            items = data.get("items", [])
+
+            if not items:
+                return []
+
+            repositories = []
+            for item in items:
+                repo_info = {
+                    "name": item.get("full_name", ""),
+                    "url": item.get("html_url", ""),
+                    "description": item.get("description") or "No description",
+                    "language": item.get("language") or "Unknown",
+                    "stars": item.get("stargazers_count", 0),
+                    "forks": item.get("forks_count", 0),
+                    "weekly_stars": 0,  # API doesn't provide this
+                    "crawled_at": datetime.now().isoformat()
+                }
+                repositories.append(repo_info)
+
+            print(f"API returned {len(repositories)} repositories")
+            return repositories
+
+        except Exception as e:
+            print(f"API request failed: {e}")
+            return []
+
+    def _fetch_trending_via_web(
+        self,
+        since: str = "weekly",
+        language: Optional[str] = None
+    ) -> List[Dict]:
+        """Fetch trending repos by scraping GitHub web page (fallback)."""
         # Build URL
         url = f"{self.base_url}?since={since}"
         if language:

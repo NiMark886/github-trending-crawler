@@ -63,6 +63,11 @@ class ConfigManager:
             "timeout": 60,
             "retry_count": 3,
             "page_size": 10,
+            "github_token": "",
+            "ui_language": "zh",
+            "translate_engine": "google",
+            "baidu_appid": "",
+            "baidu_key": "",
         }
 
     def save(self):
@@ -121,6 +126,43 @@ class ConfigManager:
         self.config["rate_limit"] = limit
         self.save()
 
+    def get_github_token(self) -> str:
+        """Get GitHub personal access token."""
+        return self.config.get("github_token", "")
+
+    def set_github_token(self, token: str):
+        """Set GitHub personal access token."""
+        self.config["github_token"] = token.strip()
+        self.save()
+
+    def get_ui_language(self) -> str:
+        return self.config.get("ui_language", "zh")
+
+    def set_ui_language(self, lang: str):
+        self.config["ui_language"] = lang
+        self.save()
+
+    def get_translate_engine(self) -> str:
+        return self.config.get("translate_engine", "google")
+
+    def set_translate_engine(self, engine: str):
+        self.config["translate_engine"] = engine
+        self.save()
+
+    def get_baidu_appid(self) -> str:
+        return self.config.get("baidu_appid", "")
+
+    def set_baidu_appid(self, appid: str):
+        self.config["baidu_appid"] = appid.strip()
+        self.save()
+
+    def get_baidu_key(self) -> str:
+        return self.config.get("baidu_key", "")
+
+    def set_baidu_key(self, key: str):
+        self.config["baidu_key"] = key.strip()
+        self.save()
+
     def reset(self):
         """Reset to default configuration."""
         self.config = self._default_config()
@@ -138,6 +180,10 @@ class ConfigManager:
         print(f"  ⏰ 超时时间: {self.get('timeout', 60)}s")
         print(f"  🔄 重试次数: {self.get('retry_count', 3)}")
         print(f"  📄 每页数量: {self.get('page_size', 10)}")
+        token = self.get_github_token()
+        print(f"  🔑 GitHub Token: {'已配置' if token else '未配置（可选）'}")
+        print(f"  🌐 界面语言: {self.get_ui_language()}")
+        print(f"  🔄 翻译引擎: {self.get_translate_engine()}")
         print(f"  📝 配置文件: {self.config_file}")
         print("=" * 60)
 
