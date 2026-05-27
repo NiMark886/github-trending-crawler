@@ -884,21 +884,40 @@ class GitHubCrawlerGUI(ctk.CTk):
                       height=32, corner_radius=6).pack(pady=10)
 
     def _extract_filename(self, resp, url):
-        """从 Content-Disposition 或 URL 提取文件名。"""
+        """从 Content-Disposition / URL 查询参数 / URL 路径提取文件名。"""
+        import re as _re
+        from urllib.parse import parse_qs
+        # 1. 从响应头 Content-Disposition 获取
         cd = resp.headers.get('content-disposition', '')
         if cd:
-            import re as _re
             m = _re.search(r"filename\*=UTF-8''(.+?)(?:;|$)", cd, _re.IGNORECASE)
             if m:
                 return unquote(m.group(1).strip())
             m = _re.search(r'filename="?([^";]+)"?', cd, _re.IGNORECASE)
             if m:
                 return unquote(m.group(1).strip())
+        # 2. 从 URL 查询参数获取 (GitHub release assets 等)
+        qs = parse_qs(urlparse(url).query)
+        for key in ['response-content-disposition', 'rscd']:
+            val = qs.get(key, [''])[0]
+            if val:
+                m = _re.search(r'filename="?([^";]+)"?', val, _re.IGNORECASE)
+                if m:
+                    return unquote(m.group(1).strip())
+        # 3. 从 URL 路径获取
         name = os.path.basename(urlparse(url).path)
         if name and '.' in name:
             return unquote(name)
+        # 4. 从重定向后的 URL 获取
         final_url = resp.url
         if final_url != url:
+            qs2 = parse_qs(urlparse(final_url).query)
+            for key in ['response-content-disposition', 'rscd']:
+                val = qs2.get(key, [''])[0]
+                if val:
+                    m = _re.search(r'filename="?([^";]+)"?', val, _re.IGNORECASE)
+                    if m:
+                        return unquote(m.group(1).strip())
             name = os.path.basename(urlparse(final_url).path)
             if name and '.' in name:
                 return unquote(name)
